@@ -3,5 +3,20 @@
 {% block content %}
 
 <h1>Čia yra vartotojo {{ current_user.vardas}} įrašai</h1>
+<hr>
+{% for irasas in vart.irasai %}
+
+
+
+<div class="card w-75">
+  <div class="card-body">
+    <h5 class="card-title">{{ irasas.tipas }}</h5>
+    <p class="card-text">{{ irasas.suma }}$ - {{ irasas.info }}</p>
+
+  </div>
+</div>
+{% endfor %}
+<hr>
+<a href="/prideti_irasa" type="button" class="btn btn-outline-primary">Pridėti įrašą</a>
 
 {% endblock %}

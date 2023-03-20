@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, g
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, current_user, logout_user, login_user, UserMixin, login_required
@@ -23,6 +23,26 @@ class Vartotojas(db.Model, UserMixin):
     vardas = db.Column("Vardas", db.String(20), unique=True, nullable=False)
     el_pastas = db.Column("El. pašto adresas", db.String(120), unique=True, nullable=False)
     slaptazodis = db.Column("Slaptažodis", db.String(60), unique=True, nullable=False)
+    irasai = db.relationship("Biudzetas")
+
+    def __init__(self, vardas, el_pastas, slaptazodis):
+        self.vardas = vardas
+        self.el_pastas = el_pastas
+        self.slaptazodis = slaptazodis
+class Biudzetas(db.Model):
+    __tablename__ = "irasas"
+    id = db.Column(db.Integer, primary_key=True)
+    tipas = db.Column(db.String, nullable=False)
+    suma = db.Column(db.Float, nullable=False)
+    info = db.Column(db.String, nullable=False)
+    vartotojo_id = db.Column(db.Integer, db.ForeignKey("vartotojas.id"))
+    vartotojas = db.relationship("Vartotojas")
+
+    def __init__(self, tipas, suma, info, id):
+        self.tipas = tipas
+        self.suma = suma
+        self.info = info
+        self.vartotojo_id = id
 
 @login_manager.user_loader
 def load_user(vartotojo_id):
@@ -37,7 +57,7 @@ def registruotis():
     form = forms.RegistracijosForma()
     if form.validate_on_submit():
         koduotas_slaptazodis = bcrypt.generate_password_hash(form.slaptazodis.data).decode('utf-8')
-        vartotojas = Vartotojas(vardas=form.vardas.data, el_pastas=form.el_pastas.data, slaptazodis=koduotas_slaptazodis)
+        vartotojas = Vartotojas(form.vardas.data, form.el_pastas.data, koduotas_slaptazodis)
         db.session.add(vartotojas)
         db.session.commit()
         flash('Sėkmingai prisiregistravote! Galite prisijungti', 'success')
@@ -73,7 +93,24 @@ def account():
 @app.route("/irasai")
 @login_required
 def irasai():
-    return render_template('irasai.html', title='Įrašai')
+    vart = Vartotojas.query.get(current_user.get_id())
+    return render_template('irasai.html', title='Įrašai', vart=vart)
+
+
+@app.route("/prideti_irasa", methods=['GET', 'POST'])
+@login_required
+def prideti():
+    form = forms.PridetiIrasa()
+    if form.validate_on_submit():
+        # user = Vartotojas.query.filter_by(el_pastas=form.el_pastas.data).first()
+        vart = current_user.get_id()
+        irasas = Biudzetas(form.tipas.data, form.suma.data, form.info.data, vart)
+
+        db.session.add(irasas)
+        db.session.commit()
+        flash('Sėkmingai pridejote irasa! Galite ji matyti sarase', 'success')
+        return redirect(url_for('irasai'))
+    return render_template('prideti_irasa.html', title='Įrašai', form=form)
 
 
 @app.route("/")
