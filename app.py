@@ -123,12 +123,19 @@ def paskyra():
         form.el_pastas.data = current_user.el_pastas
     nuotrauka = url_for('static', filename='profilio_nuotraukos/' + current_user.nuotrauka)
     return render_template('paskyra.html', title='Account', form=form, nuotrauka=nuotrauka)
+# @app.route("/irasai")
+# @login_required
+# def irasai():
+#     vart = Vartotojas.query.get(current_user.get_id())
+#     return render_template('irasai.html', title='Įrašai', vart=vart)
+
 @app.route("/irasai")
 @login_required
-def irasai():
-    vart = Vartotojas.query.get(current_user.get_id())
-    return render_template('irasai.html', title='Įrašai', vart=vart)
-
+def records():
+    db.create_all()
+    page = request.args.get('page', 1, type=int)
+    visi_irasai = Biudzetas.query.filter_by(vartotojo_id=current_user.id).paginate(page=page, per_page=5)
+    return render_template("irasai.html", visi_irasai=visi_irasai)
 
 @app.route("/prideti_irasa", methods=['GET', 'POST'])
 @login_required
@@ -142,7 +149,7 @@ def prideti():
         db.session.add(irasas)
         db.session.commit()
         flash('Sėkmingai pridejote irasa! Galite ji matyti sarase', 'success')
-        return redirect(url_for('irasai'))
+        return redirect(url_for('records'))
     return render_template('prideti_irasa.html', title='Įrašai', form=form)
 
 

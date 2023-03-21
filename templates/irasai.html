@@ -4,7 +4,7 @@
 
 <h1>Čia yra vartotojo {{ current_user.vardas}} įrašai</h1>
 <hr>
-{% for irasas in vart.irasai %}
+{% for irasas in visi_irasai.items %}
 
 
 
@@ -17,6 +17,22 @@
 </div>
 {% endfor %}
 <hr>
+
 <a href="/prideti_irasa" type="button" class="btn btn-outline-primary">Pridėti įrašą</a>
+<br>
+<br>
+{% for page_num in visi_irasai.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+  {% if page_num %}
+    {% if visi_irasai.page == page_num %}
+      <a class="btn btn-info mb-4" href="{{ url_for('records', page=page_num) }}">{{ page_num }}</a>
+    {% else %}
+      <a class="btn btn-outline-info mb-4" href="{{ url_for('records', page=page_num) }}">{{ page_num }}</a>
+    {% endif %}
+  {% else %}
+    ...
+  {% endif %}
+{% endfor %}
+
 
 {% endblock %}
+
