@@ -12,13 +12,15 @@
   <div class="card-body">
     <h5 class="card-title">{{ irasas.tipas }}</h5>
     <p class="card-text">{{ irasas.suma }}$ - {{ irasas.info }}</p>
+    <a href="{{ url_for('taisyti', id=irasas['id']) }}" type="button" class="btn btn-outline-primary">Taisyti</a>
+    <a href="{{ url_for('istrinti', id=irasas['id']) }}" type="button" class="btn btn-outline-danger">Ištrinti</a>
 
   </div>
 </div>
 {% endfor %}
 <hr>
 
-<a href="/prideti_irasa" type="button" class="btn btn-outline-primary">Pridėti įrašą</a>
+<a href="/prideti_irasa" type="button" class="btn btn-outline-success">Pridėti įrašą</a>
 <br>
 <br>
 {% for page_num in visi_irasai.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}

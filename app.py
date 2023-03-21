@@ -123,11 +123,7 @@ def paskyra():
         form.el_pastas.data = current_user.el_pastas
     nuotrauka = url_for('static', filename='profilio_nuotraukos/' + current_user.nuotrauka)
     return render_template('paskyra.html', title='Account', form=form, nuotrauka=nuotrauka)
-# @app.route("/irasai")
-# @login_required
-# def irasai():
-#     vart = Vartotojas.query.get(current_user.get_id())
-#     return render_template('irasai.html', title='Įrašai', vart=vart)
+
 
 @app.route("/irasai")
 @login_required
@@ -153,6 +149,30 @@ def prideti():
     return render_template('prideti_irasa.html', title='Įrašai', form=form)
 
 
+@app.route('/taisyti/<int:id>', methods=['GET', 'POST'])
+def taisyti(id):
+    irasas = Biudzetas.query.get(id)
+    form = forms.PridetiIrasa()
+    if form.validate_on_submit():
+        irasas.tipas = form.tipas.data
+        irasas.suma = form.suma.data
+        irasas.info = form.info.data
+        db.session.commit()
+        flash('Sėkmingai atnaujinote irasa! Galite ji matyti sarase', 'success')
+        return redirect(url_for('records'))
+    elif request.method == 'GET':
+        form.tipas.data = irasas.tipas
+        form.suma.data = irasas.suma
+        form.info.data = irasas.info
+        return render_template('prideti_irasa.html', title='Įrašai', form=form)
+
+
+@app.route('/istrinti<int:id>')
+def istrinti(id):
+    irasas = Biudzetas.query.get(id)
+    db.session.delete(irasas)
+    db.session.commit()
+    return redirect(url_for('records'))
 @app.route("/")
 def index():
     db.create_all()
