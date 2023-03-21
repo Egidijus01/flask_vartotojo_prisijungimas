@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, current_user, logout_user, login_user, UserMixin, login_required
 import forms
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
@@ -30,6 +32,8 @@ class Vartotojas(db.Model, UserMixin):
         self.vardas = vardas
         self.el_pastas = el_pastas
         self.slaptazodis = slaptazodis
+
+
 class Biudzetas(db.Model):
     __tablename__ = "irasas"
     id = db.Column(db.Integer, primary_key=True)
@@ -146,6 +150,15 @@ def prideti():
 def index():
     db.create_all()
     return render_template("index.html")
+
+
+class ManoModelView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.el_pastas == "eg@one.lt"
+
+admin = Admin(app)
+admin.add_view(ModelView(Biudzetas, db.session))
+admin.add_view(ManoModelView(Vartotojas, db.session))
 
 if __name__ == '__main__':
     app.run(host='127.0.0.1', port=8000, debug=True)
