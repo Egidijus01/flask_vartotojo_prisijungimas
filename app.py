@@ -22,6 +22,7 @@ class Vartotojas(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     vardas = db.Column("Vardas", db.String(20), unique=True, nullable=False)
     el_pastas = db.Column("El. pašto adresas", db.String(120), unique=True, nullable=False)
+    nuotrauka = db.Column(db.String(20), nullable=False, default='default.jpg')
     slaptazodis = db.Column("Slaptažodis", db.String(60), unique=True, nullable=False)
     irasai = db.relationship("Biudzetas")
 
@@ -85,11 +86,39 @@ def atsijungti():
     return redirect(url_for('index'))
 
 
-@app.route("/paskyra")
-@login_required
-def account():
-    return render_template('paskyra.html', title='Paskyra')
+import secrets
+from PIL import Image
 
+def save_picture(form_picture):
+    random_hex = secrets.token_hex(8)
+    _, f_ext = os.path.splitext(form_picture.filename)
+    picture_fn = random_hex + f_ext
+    picture_path = os.path.join(app.root_path, 'static/profilio_nuotraukos', picture_fn)
+
+    output_size = (125, 125)
+    i = Image.open(form_picture)
+    i.thumbnail(output_size)
+    i.save(picture_path)
+
+    return picture_fn
+@app.route("/paskyra", methods=['GET', 'POST'])
+@login_required
+def paskyra():
+    form = forms.PaskyrosAtnaujinimoForma()
+    if form.validate_on_submit():
+        if form.nuotrauka.data:
+            nuotrauka = save_picture(form.nuotrauka.data)
+            current_user.nuotrauka = nuotrauka
+        current_user.vardas = form.vardas.data
+        current_user.el_pastas = form.el_pastas.data
+        db.session.commit()
+        flash('Tavo paskyra atnaujinta!', 'success')
+        return redirect(url_for('paskyra'))
+    elif request.method == 'GET':
+        form.vardas.data = current_user.vardas
+        form.el_pastas.data = current_user.el_pastas
+    nuotrauka = url_for('static', filename='profilio_nuotraukos/' + current_user.nuotrauka)
+    return render_template('paskyra.html', title='Account', form=form, nuotrauka=nuotrauka)
 @app.route("/irasai")
 @login_required
 def irasai():
@@ -115,6 +144,7 @@ def prideti():
 
 @app.route("/")
 def index():
+    db.create_all()
     return render_template("index.html")
 
 if __name__ == '__main__':
