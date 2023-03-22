@@ -6,18 +6,46 @@ from flask_login import LoginManager, current_user, logout_user, login_user, Use
 import forms
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
+from flask_mail import Message, Mail
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '4654f5dfadsrfasdr54e6rae'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'biudzetas.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = "MAIL_USERNAME"
+app.config['MAIL_PASSWORD'] = "MAIL_PASSWORD"
+
+mail = Mail(app)
+
+
+def send_reset_email(user):
+    token = user.get_reset_token()
+    msg = Message('Slaptažodžio atnaujinimo užklausa',
+                  sender='el@pastas.lt',
+                  recipients=[user.el_pastas])
+    msg.body = f'''Norėdami atnaujinti slaptažodį, paspauskite nuorodą:
+    {url_for('reset_token', token=token, _external=True)}
+    Jei jūs nedarėte šios užklausos, nieko nedarykite ir slaptažodis nebus pakeistas.
+    '''
+    mail.send(msg)
+
+
 
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'prisijungti'
 login_manager.login_message_category = 'info'
+
+
 
 class Vartotojas(db.Model, UserMixin):
     __tablename__ = "vartotojas"
@@ -32,6 +60,19 @@ class Vartotojas(db.Model, UserMixin):
         self.vardas = vardas
         self.el_pastas = el_pastas
         self.slaptazodis = slaptazodis
+
+    def get_reset_token(self, expires_sec=1800):
+        s = Serializer(app.config['SECRET_KEY'], expires_sec)
+        return s.dumps({'user_id': self.id}).decode('utf-8')
+
+    @staticmethod
+    def verify_reset_token(token):
+        s = Serializer(app.config['SECRET_KEY'])
+        try:
+            user_id = s.loads(token)['user_id']
+        except:
+            return None
+        return Vartotojas.query.get(user_id)
 
 
 class Biudzetas(db.Model):
@@ -111,6 +152,7 @@ def paskyra():
     form = forms.PaskyrosAtnaujinimoForma()
     if form.validate_on_submit():
         if form.nuotrauka.data:
+
             nuotrauka = save_picture(form.nuotrauka.data)
             current_user.nuotrauka = nuotrauka
         current_user.vardas = form.vardas.data
@@ -122,7 +164,13 @@ def paskyra():
         form.vardas.data = current_user.vardas
         form.el_pastas.data = current_user.el_pastas
     nuotrauka = url_for('static', filename='profilio_nuotraukos/' + current_user.nuotrauka)
+
+
+
     return render_template('paskyra.html', title='Account', form=form, nuotrauka=nuotrauka)
+#
+# nuotrauka = current_user.
+# render_template('base.html', foto=profilio_nuotrauka)
 
 
 @app.route("/irasai")
@@ -177,6 +225,36 @@ def istrinti(id):
 def index():
     db.create_all()
     return render_template("index.html")
+
+@app.route("/reset_password", methods=['GET', 'POST'])
+def reset_request():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = forms.UzklausosAtnaujinimoForma()
+    if form.validate_on_submit():
+        user = Vartotojas.query.filter_by(el_pastas=form.el_pastas.data).first()
+        send_reset_email(user)
+        flash('Jums išsiųstas el. laiškas su slaptažodžio atnaujinimo instrukcijomis.', 'info')
+        return redirect(url_for('prisijungti'))
+    return render_template('reset_request.html', title='Reset Password', form=form)
+
+
+@app.route("/reset_password/<token>", methods=['GET', 'POST'])
+def reset_token(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    user = Vartotojas.verify_reset_token(token)
+    if user is None:
+        flash('Užklausa netinkama arba pasibaigusio galiojimo', 'warning')
+        return redirect(url_for('reset_request'))
+    form = forms.SlaptazodzioAtnaujinimoForma()
+    if form.validate_on_submit():
+        hashed_password = bcrypt.generate_password_hash(form.slaptazodis.data).decode('utf-8')
+        user.slaptazodis = hashed_password
+        db.session.commit()
+        flash('Tavo slaptažodis buvo atnaujintas! Gali prisijungti', 'success')
+        return redirect(url_for('prisijungti'))
+    return render_template('reset_token.html', title='Reset Password', form=form)
 
 
 class ManoModelView(ModelView):

@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import SubmitField, BooleanField, StringField, PasswordField, SelectField, TextAreaField
-from wtforms.validators import DataRequired, ValidationError, EqualTo
-import app
+from wtforms.validators import DataRequired, ValidationError, EqualTo, Email
+from app import Vartotojas, current_user
 
 
 class RegistracijosForma(FlaskForm):
@@ -42,14 +42,29 @@ class PaskyrosAtnaujinimoForma(FlaskForm):
     nuotrauka = FileField('Atnaujinti profilio nuotrauką', validators=[FileAllowed(['jpg', 'png'])])
     submit = SubmitField('Atnaujinti')
 
-    def validate_vardas(self, vardas):
-        if vardas.data != app.current_user.vardas:
-            vartotojas = app.Vartotojas.query.filter_by(vardas=vardas.data).first()
+    def tikrinti_varda(self, vardas):
+        if vardas.data != current_user.vardas:
+            vartotojas = Vartotojas.query.filter_by(vardas=vardas.data).first()
             if vartotojas:
                 raise ValidationError('Šis vardas panaudotas. Pasirinkite kitą.')
 
-    def validate_el_pastas(self, el_pastas):
-        if el_pastas.data != app.current_user.el_pastas:
-            vartotojas = app.Vartotojas.query.filter_by(el_pastas=el_pastas.data).first()
+    def tikrinti_pasta(self, el_pastas):
+        if el_pastas.data != current_user.el_pastas:
+            vartotojas = Vartotojas.query.filter_by(el_pastas=el_pastas.data).first()
             if vartotojas:
                 raise ValidationError('Šis el. pašto adresas panaudotas. Pasirinkite kitą.')
+
+class UzklausosAtnaujinimoForma(FlaskForm):
+    el_pastas = StringField('El. paštas', validators=[DataRequired(), Email()])
+    submit = SubmitField('Gauti')
+
+    def validate_email(self, el_pastas):
+        user = Vartotojas.query.filter_by(el_pastas=el_pastas.data).first()
+        if user is None:
+            raise ValidationError('Nėra paskyros, registruotos šiuo el. pašto adresu. Registruokitės.')
+
+
+class SlaptazodzioAtnaujinimoForma(FlaskForm):
+    slaptazodis = PasswordField('Slaptažodis', validators=[DataRequired()])
+    patvirtintas_slaptazodis = PasswordField('Pakartokite slaptažodį', validators=[DataRequired(), EqualTo('slaptazodis')])
+    submit = SubmitField('Atnaujinti Slaptažodį')
