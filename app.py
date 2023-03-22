@@ -261,6 +261,19 @@ class ManoModelView(ModelView):
     def is_accessible(self):
         return current_user.is_authenticated and current_user.el_pastas == "eg@one.lt"
 
+
+@app.errorhandler(404)
+def klaida_404(klaida):
+    return render_template("404.html"), 404
+
+@app.errorhandler(403)
+def klaida_403(klaida):
+    return render_template("403.html"), 403
+
+@app.errorhandler(500)
+def klaida_500(klaida):
+    return render_template("500.html"), 500
+
 admin = Admin(app)
 admin.add_view(ModelView(Biudzetas, db.session))
 admin.add_view(ManoModelView(Vartotojas, db.session))
