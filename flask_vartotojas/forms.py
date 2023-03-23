@@ -2,7 +2,8 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from wtforms import SubmitField, BooleanField, StringField, PasswordField, SelectField, TextAreaField
 from wtforms.validators import DataRequired, ValidationError, EqualTo, Email
-from flask_vartotojas.models import Vartotojas, Biudzetas
+
+from flask_vartotojas.models import Vartotojas
 
 
 class RegistracijosForma(FlaskForm):
